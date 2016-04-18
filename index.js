@@ -16,10 +16,31 @@ var currentUsage = 0;
 var profilingPending = false;
 var usageHistory = [];
 
+
+var emergencyAction = function (usageHistory) {
+    logger.warn('emergencyAction done.');
+};
+
+var emergencyCondition = function (lastUsage, currentUsage, usageHistory) {
+    if (lastUsage.cpu > 50 && currentUsage.cpu > 50) {
+        return true;
+    }
+};
+
+var shieldOptions = {
+    logsPath: logsPath,
+    samplingTime: 60,
+    flushTime: 3,
+    cacheMaxLimit: 100,
+    usageOptions: { keepHistory: true },
+    emergencyCondition: emergencyCondition,
+    emergencyAction: emergencyAction
+};
+
 var takeSnapshotAndSave = function (callback) {
     var uuid = os.hostname() + Date.now();
     var snapshot = profiler.takeSnapshot();
-    var saveFilePath = path.join(logsPath, uuid + '.snapshot');
+    var saveFilePath = path.join(shieldOptions.logsPath, uuid + '.snapshot');
 
     debug('takeSnapshotAndSave start');
 
@@ -40,7 +61,7 @@ var takeSnapshotAndSave = function (callback) {
 var takeProfilerAndSave = function (callback, samplingTime) {
     var uuid = os.hostname() + Date.now();
     var profile = profiler.startProfiling(uuid, true);
-    var saveFilePath = path.join(logsPath, uuid + '.cpuprofile');
+    var saveFilePath = path.join(shieldOptions.logsPath, uuid + '.cpuprofile');
     var stopProfilingAndSave = function () {
         debug('takeProfilerAndSave stop');
         callback = callback || function () {};
@@ -62,26 +83,6 @@ var takeProfilerAndSave = function (callback, samplingTime) {
 
     debug('takeProfilerAndSave start');
     setTimeout(stopProfilingAndSave, samplingTime * 1000);
-};
-
-var emergencyAction = function (usageHistory) {
-    logger.warn('emergencyAction done.');
-};
-
-var emergencyCondition = function (lastUsage, currentUsage, usageHistory) {
-    if (lastUsage.cpu > 50 && currentUsage.cpu > 50) {
-        return true;
-    }
-};
-
-var shieldOptions = {
-    logsPath: logsPath,
-    samplingTime: 60,
-    flushTime: 3,
-    cacheMaxLimit: 100,
-    usageOptions: { keepHistory: true },
-    emergencyCondition: emergencyCondition,
-    emergencyAction: emergencyAction
 };
 
 var cpuUsageLook = function () {
